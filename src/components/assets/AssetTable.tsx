@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
-import { AssetStatus, Condition } from "@prisma/client";
+import { AssetStatus, Condition, ApprovalStatus } from "@prisma/client";
 import {
   TableWrapper,
   Thead,
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/Table";
 import { StatusBadge } from "./StatusBadge";
 import { ConditionBadge } from "./ConditionBadge";
+import { ApprovalBadge } from "./ApprovalBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export type AssetRow = {
@@ -23,6 +24,7 @@ export type AssetRow = {
   lengthKm: number | null;
   status: AssetStatus;
   condition: Condition;
+  approvalStatus: ApprovalStatus;
   acquisitionCost: number | null;
   updatedAt: string | Date;
   category: { name: string };
@@ -98,6 +100,7 @@ export function AssetTable({
           {isAdmin && <Th>Division</Th>}
           <Th>Status</Th>
           <Th>Condition</Th>
+          <Th>Approval</Th>
           <SortableTh field="acquisitionCost">Cost (₹)</SortableTh>
           <SortableTh field="createdAt">Updated</SortableTh>
         </Tr>
@@ -118,6 +121,9 @@ export function AssetTable({
             </Td>
             <Td>
               <ConditionBadge condition={row.condition} />
+            </Td>
+            <Td>
+              <ApprovalBadge status={row.approvalStatus} />
             </Td>
             <Td className="tabular-nums">
               {row.acquisitionCost != null

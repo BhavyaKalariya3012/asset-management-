@@ -215,7 +215,16 @@ export function AssetForm({
       }
 
       const id = mode === "create" ? json.data.id : assetId;
-      toast.success(mode === "create" ? "Asset created" : "Asset updated");
+      if (mode === "create") {
+        const pending = json.data?.approvalStatus === "PENDING";
+        toast.success(
+          pending
+            ? "Asset submitted for Chief Engineer approval"
+            : "Asset created"
+        );
+      } else {
+        toast.success("Asset updated");
+      }
       router.push(`/assets/${id}`);
       router.refresh();
     } catch {

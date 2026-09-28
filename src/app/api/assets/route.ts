@@ -48,6 +48,11 @@ export async function POST(req: NextRequest) {
 
     const specs = parseSpecsForCategory(category.code, body.specs);
 
+    // Approval workflow: assets registered by a Division (MANAGER) start PENDING
+    // and require Chief Engineer (ADMIN) sign-off; ADMIN-created assets are
+    // auto-approved on the spot.
+    const isAdmin = user.role === "ADMIN";
+
     const asset = await createAssetWithCode(prisma, category.code, (assetCode) =>
       prisma.$transaction(async (tx) => {
         const created = await tx.asset.create({
@@ -68,6 +73,9 @@ export async function POST(req: NextRequest) {
             acquisitionDate: body.acquisitionDate,
             acquisitionCost: body.acquisitionCost,
             createdById: user.id,
+            approvalStatus: isAdmin ? "APPROVED" : "PENDING",
+            approvedById: isAdmin ? user.id : null,
+            approvedAt: isAdmin ? new Date() : null,
           },
         });
         await tx.statusHistory.create({

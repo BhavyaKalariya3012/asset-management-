@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { AssetStatus, Condition } from "@prisma/client";
+import { AssetStatus, Condition, ApprovalStatus } from "@prisma/client";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
@@ -16,6 +16,12 @@ const CONDITION_LABELS: Record<Condition, string> = {
   FAIR: "Fair",
   POOR: "Poor",
   CRITICAL: "Critical",
+};
+
+const APPROVAL_LABELS: Record<ApprovalStatus, string> = {
+  PENDING: "Pending approval",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
 };
 
 export function AssetFilters({
@@ -123,6 +129,21 @@ export function AssetFilters({
           {Object.values(Condition).map((c) => (
             <option key={c} value={c}>
               {CONDITION_LABELS[c]}
+            </option>
+          ))}
+        </Select>
+      </div>
+
+      <div className="w-44">
+        <Select
+          label="Approval"
+          value={searchParams.get("approval") ?? ""}
+          onChange={(e) => onSelect("approval", e.target.value)}
+        >
+          <option value="">All approvals</option>
+          {Object.values(ApprovalStatus).map((a) => (
+            <option key={a} value={a}>
+              {APPROVAL_LABELS[a]}
             </option>
           ))}
         </Select>

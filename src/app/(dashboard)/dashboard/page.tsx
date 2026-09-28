@@ -8,6 +8,7 @@ import {
   IndianRupee,
   AlertTriangle,
   Siren,
+  ClipboardCheck,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
@@ -71,6 +72,23 @@ export default async function DashboardPage() {
         <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600">
           Showing data for <span className="font-medium">{divisionLabel}</span>.
         </p>
+      )}
+
+      {isAdmin && totals.pendingApprovals > 0 && (
+        <Link
+          href="/assets?approval=PENDING"
+          className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 transition-colors hover:bg-amber-100"
+        >
+          <span className="flex items-center gap-2">
+            <ClipboardCheck className="h-4 w-4" />
+            <span className="font-medium">
+              {totals.pendingApprovals} asset
+              {totals.pendingApprovals === 1 ? "" : "s"}
+            </span>
+            registered by Divisions await your approval.
+          </span>
+          <span className="font-medium underline">Review</span>
+        </Link>
       )}
 
       {/* Row 1 — KPI cards */}

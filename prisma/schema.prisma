@@ -30,6 +30,12 @@ enum Condition {
   CRITICAL
 }
 
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum MaintenanceType {
   ROUTINE
   PERIODIC_RENEWAL
@@ -49,10 +55,11 @@ model User {
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
 
-  division    Division?           @relation(fields: [divisionId], references: [id])
-  assets      Asset[]
-  history     StatusHistory[]
-  maintenance MaintenanceRecord[]
+  division      Division?           @relation(fields: [divisionId], references: [id])
+  assets        Asset[]
+  approvals     Asset[]             @relation("AssetApprover")
+  history       StatusHistory[]
+  maintenance   MaintenanceRecord[]
 }
 
 model Division {
@@ -101,6 +108,14 @@ model Asset {
 
   acquisitionDate DateTime?
   acquisitionCost Decimal?    @db.Decimal(14, 2)
+
+  // Approval workflow: MANAGER-created assets start PENDING and need ADMIN
+  // (Chief Engineer) sign-off; ADMIN-created assets are auto-APPROVED.
+  approvalStatus  ApprovalStatus @default(APPROVED)
+  approvedById    String?
+  approvedAt      DateTime?
+  rejectionReason String?
+
   createdById     String
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -109,6 +124,7 @@ model Asset {
   division    Division            @relation(fields: [divisionId], references: [id])
   location    Location            @relation(fields: [locationId], references: [id])
   createdBy   User                @relation(fields: [createdById], references: [id])
+  approvedBy  User?               @relation("AssetApprover", fields: [approvedById], references: [id])
   history     StatusHistory[]
   maintenance MaintenanceRecord[]
 
@@ -117,6 +133,7 @@ model Asset {
   @@index([divisionId])
   @@index([condition])
   @@index([roadNumber])
+  @@index([approvalStatus])
 }
 
 model StatusHistory {

@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { AssetStatus, Condition, MaintenanceType, Role } from "@prisma/client";
+import {
+  AssetStatus,
+  Condition,
+  MaintenanceType,
+  Role,
+  ApprovalStatus,
+} from "@prisma/client";
 
 /* -------------------------------------------------------------------------- */
 /* Category-specific specs (Asset.specs JSON)                                 */
@@ -131,6 +137,7 @@ export const assetQuerySchema = z.object({
   categoryId: z.string().optional(),
   divisionId: z.string().optional(),
   condition: z.enum(Condition).optional(),
+  approval: z.enum(ApprovalStatus).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(10),
   sort: z.enum(SORT_FIELDS).default("createdAt"),
@@ -249,3 +256,28 @@ export const updateUserSchema = z.object({
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
+
+/* -------------------------------------------------------------------------- */
+/* Asset approval (ADMIN / Chief Engineer)                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Body for POST /api/assets/[id]/approval.
+ * A rejection must carry a reason; the route enforces it returns 400 otherwise.
+ */
+export const approvalDecisionSchema = z
+  .object({
+    decision: z.enum(["APPROVE", "REJECT"]),
+    reason: z.string().trim().max(500).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.decision === "REJECT" && !data.reason) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["reason"],
+        message: "A reason is required when rejecting an asset",
+      });
+    }
+  });
+
+export type ApprovalDecisionInput = z.infer<typeof approvalDecisionSchema>;

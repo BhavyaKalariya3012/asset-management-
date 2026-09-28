@@ -16,6 +16,7 @@ const detailInclude = {
   division: { select: { id: true, name: true, code: true, circle: true } },
   location: { select: { id: true, name: true, district: true, lat: true, lng: true } },
   createdBy: { select: { id: true, name: true } },
+  approvedBy: { select: { id: true, name: true } },
   history: {
     orderBy: { changedAt: "desc" },
     include: { changedBy: { select: { id: true, name: true } } },
@@ -36,13 +37,24 @@ export type AssetDetail = Prisma.AssetGetPayload<{ include: typeof detailInclude
  * Shared by the list page (server component) and GET /api/assets.
  */
 export async function listAssets(user: SessionUser, query: AssetQuery) {
-  const { q, status, categoryId, divisionId, condition, page, pageSize, sort, order } =
-    query;
+  const {
+    q,
+    status,
+    categoryId,
+    divisionId,
+    condition,
+    approval,
+    page,
+    pageSize,
+    sort,
+    order,
+  } = query;
 
   const where: Prisma.AssetWhereInput = { ...divisionScope(user) };
 
   if (status) where.status = status;
   if (condition) where.condition = condition;
+  if (approval) where.approvalStatus = approval;
   if (categoryId) where.categoryId = categoryId;
   // Non-admins are already pinned to their division; only ADMIN may filter.
   if (user.role === "ADMIN" && divisionId) where.divisionId = divisionId;
@@ -83,11 +95,13 @@ export async function listAssets(user: SessionUser, query: AssetQuery) {
  * every matching row.
  */
 export async function listAssetsForExport(user: SessionUser, query: AssetQuery) {
-  const { q, status, categoryId, divisionId, condition, sort, order } = query;
+  const { q, status, categoryId, divisionId, condition, approval, sort, order } =
+    query;
 
   const where: Prisma.AssetWhereInput = { ...divisionScope(user) };
   if (status) where.status = status;
   if (condition) where.condition = condition;
+  if (approval) where.approvalStatus = approval;
   if (categoryId) where.categoryId = categoryId;
   if (user.role === "ADMIN" && divisionId) where.divisionId = divisionId;
   if (q) {

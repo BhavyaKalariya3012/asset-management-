@@ -21,6 +21,7 @@ export type DashboardStats = {
     underMaintenance: number;
     overdueMaintenance: number;
     emergencyRepairs12m: number;
+    pendingApprovals: number;
   };
   byStatus: { status: AssetStatus; count: number }[];
   byCategory: { category: string; count: number; value: number }[];
@@ -66,6 +67,7 @@ export async function getDashboardStats(
         name: true,
         status: true,
         condition: true,
+        approvalStatus: true,
         lengthKm: true,
         acquisitionCost: true,
         category: { select: { name: true, code: true } },
@@ -193,6 +195,9 @@ export async function getDashboardStats(
 
   const inService = statusCounts.get("IN_SERVICE") ?? 0;
   const underMaintenance = statusCounts.get("UNDER_MAINTENANCE") ?? 0;
+  const pendingApprovals = assets.filter(
+    (a) => a.approvalStatus === "PENDING"
+  ).length;
 
   return {
     totals: {
@@ -205,6 +210,7 @@ export async function getDashboardStats(
       underMaintenance,
       overdueMaintenance: overdue.length,
       emergencyRepairs12m,
+      pendingApprovals,
     },
     byStatus,
     byCategory,

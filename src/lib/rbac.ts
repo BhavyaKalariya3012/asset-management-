@@ -14,6 +14,7 @@ export type Permission =
   | "asset:create"
   | "asset:update"
   | "asset:status"
+  | "asset:approve"
   | "maintenance:create"
   | "user:manage";
 
@@ -21,6 +22,7 @@ const MATRIX: Record<Permission, Role[]> = {
   "asset:create": ["ADMIN", "MANAGER"],
   "asset:update": ["ADMIN", "MANAGER"],
   "asset:status": ["ADMIN", "MANAGER"],
+  "asset:approve": ["ADMIN"], // Chief Engineer approves assets registered by Divisions
   "maintenance:create": ["ADMIN", "MANAGER", "OFFICER"],
   "user:manage": ["ADMIN"],
 };

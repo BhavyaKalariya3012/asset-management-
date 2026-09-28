@@ -9,6 +9,8 @@ import { getAssetById } from "@/lib/queries/assets";
 import { nextStatuses } from "@/lib/lifecycle";
 import { StatusBadge } from "@/components/assets/StatusBadge";
 import { ConditionBadge } from "@/components/assets/ConditionBadge";
+import { ApprovalBadge } from "@/components/assets/ApprovalBadge";
+import { ApprovalActions } from "@/components/assets/ApprovalActions";
 import { SpecsList } from "@/components/assets/SpecsList";
 import { StatusChangeModal } from "@/components/assets/StatusChangeModal";
 import {
@@ -53,6 +55,8 @@ export default async function AssetDetailPage({
   const isDisposed = asset.status === "DISPOSED";
   const canEdit = can(user.role, "asset:update") && !isDisposed;
   const canStatus = can(user.role, "asset:status");
+  const canApprove =
+    can(user.role, "asset:approve") && asset.approvalStatus === "PENDING";
   const allowedNextStatuses = nextStatuses(asset.status);
   const canLogMaintenance =
     can(user.role, "maintenance:create") &&
@@ -96,12 +100,14 @@ export default async function AssetDetailPage({
             </h1>
             <StatusBadge status={asset.status} />
             <ConditionBadge condition={asset.condition} />
+            <ApprovalBadge status={asset.approvalStatus} />
           </div>
           <p className="text-sm font-medium text-slate-500">
             {asset.assetCode} · {asset.category.name}
           </p>
         </div>
         <div className="flex gap-2">
+          {canApprove && <ApprovalActions assetId={asset.id} />}
           {canEdit && (
             <Link href={`/assets/${asset.id}/edit`}>
               <Button variant="secondary">
@@ -118,6 +124,21 @@ export default async function AssetDetailPage({
           />
         </div>
       </div>
+
+      {asset.approvalStatus === "PENDING" && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          {can(user.role, "asset:approve")
+            ? "This asset was registered by a Division and is awaiting your approval."
+            : "This asset is awaiting Chief Engineer approval before it is confirmed."}
+        </div>
+      )}
+      {asset.approvalStatus === "REJECTED" && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <span className="font-medium">Rejected</span>
+          {asset.approvedBy ? ` by ${asset.approvedBy.name}` : ""}
+          {asset.rejectionReason ? ` — ${asset.rejectionReason}` : "."}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left column (2/3): details + specs + maintenance */}
