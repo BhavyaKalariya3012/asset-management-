@@ -11,13 +11,13 @@
 - [ ] GitHub repo pushed, Vercel connected, first deploy green (manual — see "Manual steps")
 
 ## Phase 2 — Auth + RBAC + Division scope + Shell (1:15–2:00)
-- [ ] NextAuth Credentials (`lib/auth.ts`, route, type augmentation incl. divisionId)
-- [ ] `lib/session.ts`, `lib/rbac.ts` (can, requireRole, divisionScope)
-- [ ] `middleware.ts` protecting routes
-- [ ] Login page
-- [ ] UI primitives
-- [ ] Dashboard layout: Sidebar + Topbar (role label + division), role-aware nav
-- [ ] Root `/` redirects to `/dashboard`
+- [x] NextAuth Credentials (`lib/auth.ts`, route, type augmentation incl. divisionId)
+- [x] `lib/session.ts`, `lib/rbac.ts` (can, requireRole, divisionScope)
+- [x] `middleware.ts` protecting routes (+ `/users` ADMIN-only redirect)
+- [x] Login page (error handling + demo-credentials hint box)
+- [x] UI primitives (Button, Input, Select, Textarea, Badge, Card, Modal, Toast, Spinner, EmptyState, Pagination, Table)
+- [x] Dashboard layout: Sidebar + Topbar (role label + division), role-aware nav, mobile drawer
+- [x] Root `/` redirects to `/dashboard`
 
 ## Phase 3 — Asset CRUD (2:00–3:30)
 - [ ] `lib/validators.ts` (asset schemas + specsSchemaByCategoryCode)
@@ -56,6 +56,8 @@
 - **npm 11 script gating**: npm 11 blocks dependency install scripts by default. Approved via `npm approve-scripts prisma @prisma/client @prisma/engines bcrypt esbuild unrs-resolver` (needed for Prisma engines, bcrypt native build, and tsx/esbuild). Re-run this after a fresh `npm install` if postinstall scripts get re-gated.
 - **Extra managers seeded**: added `manager4/5/6@gov.in` (Rajkot/Gandhinagar/Bhuj) so every division has a manager to attribute `StatusHistory.changedBy` and maintenance to. Documented demo creds in CLAUDE.md remain valid.
 - **Locations idempotency**: `Location` has no unique key, so the seed uses find-or-create on (name, district).
+- **Phase 2 — middleware vs proxy**: Next 16 deprecates the `middleware` file convention in favour of `proxy`, but the task specifies `next-auth/middleware`, so `src/middleware.ts` stays. It builds and runs (registered as "Proxy (Middleware)"). Consider migrating later.
+- **Phase 2 — live login testing needs the DB**: unauthenticated redirects (`/dashboard`, `/assets`, `/maintenance`, `/users` → `/login`) and the login page + demo box were verified with a running dev server. Verifying the 4 real logins, wrong-password error, per-user Topbar role/division, and Manager→`/users` redirect requires the seeded Neon DB (set `DATABASE_URL`, then `migrate dev` + `db seed`).
 
 ## Manual steps (developer)
 1. **Create Neon Postgres DB**: sign in at https://neon.tech, create a project/database, copy the pooled connection string.
