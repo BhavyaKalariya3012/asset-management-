@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AssetStatus, Condition, MaintenanceType } from "@prisma/client";
+import { AssetStatus, Condition, MaintenanceType, Role } from "@prisma/client";
 
 /* -------------------------------------------------------------------------- */
 /* Category-specific specs (Asset.specs JSON)                                 */
@@ -208,3 +208,44 @@ export const upcomingQuerySchema = z.object({
 });
 
 export type UpcomingQuery = z.infer<typeof upcomingQuerySchema>;
+
+/* -------------------------------------------------------------------------- */
+/* Users (ADMIN only)                                                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Body for POST /api/users. divisionId is required unless the role is ADMIN
+ * (head office has no division); the cross-field rule attaches its error to
+ * divisionId so the form can highlight it.
+ */
+export const createUserSchema = z
+  .object({
+    name: z.string().trim().min(2).max(120),
+    email: z.string().trim().toLowerCase().email(),
+    password: z.string().min(8).max(100),
+    role: z.enum(Role),
+    divisionId: z.string().min(1).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.role !== "ADMIN" && !data.divisionId) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["divisionId"],
+        message: "A division is required for Managers and Officers",
+      });
+    }
+  });
+
+/**
+ * Body for PATCH /api/users/[id]. All fields optional. When role becomes
+ * non-ADMIN a divisionId must be present (checked in the route against the
+ * merged record). ADMIN cannot deactivate themselves (checked in the route).
+ */
+export const updateUserSchema = z.object({
+  role: z.enum(Role).optional(),
+  divisionId: z.string().min(1).nullable().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export type CreateUserInput = z.infer<typeof createUserSchema>;
+export type UpdateUserInput = z.infer<typeof updateUserSchema>;
