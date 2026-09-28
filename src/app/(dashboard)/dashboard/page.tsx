@@ -74,7 +74,7 @@ export default async function DashboardPage() {
       )}
 
       {/* Row 1 — KPI cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 2xl:grid-cols-6">
         <KpiCard
           label="Total Assets"
           value={totals.assets}
