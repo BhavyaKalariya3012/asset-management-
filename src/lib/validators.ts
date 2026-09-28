@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AssetStatus, Condition } from "@prisma/client";
+import { AssetStatus, Condition, MaintenanceType } from "@prisma/client";
 
 /* -------------------------------------------------------------------------- */
 /* Category-specific specs (Asset.specs JSON)                                 */
@@ -138,3 +138,73 @@ export const assetQuerySchema = z.object({
 });
 
 export type AssetQuery = z.infer<typeof assetQuerySchema>;
+
+/* -------------------------------------------------------------------------- */
+/* Lifecycle status change                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Body for POST /api/assets/[id]/status.
+ * The transition rule (canTransition) and the remarks-required-for-terminal
+ * rule are enforced in the route so they can return 409 / 400 respectively.
+ */
+export const statusChangeSchema = z.object({
+  toStatus: z.enum(AssetStatus),
+  remarks: z.string().trim().max(500).optional(),
+});
+
+export type StatusChangeInput = z.infer<typeof statusChangeSchema>;
+
+/* -------------------------------------------------------------------------- */
+/* Maintenance record create                                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Body for POST /api/assets/[id]/maintenance.
+ * - performedOn may not be in the future
+ * - nextDueOn (when given) must be strictly after performedOn
+ * Both cross-field rules attach their error to the relevant field so the
+ * client form can highlight it.
+ */
+export const maintenanceCreateSchema = z
+  .object({
+    type: z.enum(MaintenanceType),
+    description: z.string().trim().min(5).max(500),
+    cost: z.number().min(0).optional(),
+    contractor: z.string().trim().max(120).optional(),
+    workOrderNo: z.string().trim().max(60).optional(),
+    performedOn: z.coerce.date(),
+    nextDueOn: z.coerce.date().optional(),
+  })
+  .superRefine((data, ctx) => {
+    // performedOn not in the future (compare on day granularity, end of today).
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+    if (data.performedOn.getTime() > endOfToday.getTime()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["performedOn"],
+        message: "Performed date cannot be in the future",
+      });
+    }
+    if (
+      data.nextDueOn &&
+      data.nextDueOn.getTime() <= data.performedOn.getTime()
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["nextDueOn"],
+        message: "Next due date must be after the performed date",
+      });
+    }
+  });
+
+export type MaintenanceCreateInput = z.infer<typeof maintenanceCreateSchema>;
+
+/** Query for GET /api/maintenance/upcoming. */
+export const upcomingQuerySchema = z.object({
+  scope: z.enum(["overdue", "upcoming", "all"]).default("all"),
+  days: z.coerce.number().int().min(1).max(365).default(30),
+});
+
+export type UpcomingQuery = z.infer<typeof upcomingQuerySchema>;

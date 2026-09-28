@@ -6,9 +6,17 @@ import { Button } from "@/components/ui/Button";
 import { getCurrentUser } from "@/lib/session";
 import { can } from "@/lib/rbac";
 import { getAssetById } from "@/lib/queries/assets";
+import { nextStatuses } from "@/lib/lifecycle";
 import { StatusBadge } from "@/components/assets/StatusBadge";
 import { ConditionBadge } from "@/components/assets/ConditionBadge";
 import { SpecsList } from "@/components/assets/SpecsList";
+import { StatusChangeModal } from "@/components/assets/StatusChangeModal";
+import {
+  LifecycleTimeline,
+  type TimelineEntry,
+} from "@/components/assets/LifecycleTimeline";
+import { MaintenancePanel } from "@/components/maintenance/MaintenancePanel";
+import type { MaintenanceRecordView } from "@/components/maintenance/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export const metadata = { title: "Asset · R&B AssetTrack" };
@@ -42,9 +50,40 @@ export default async function AssetDetailPage({
   const asset = await getAssetById(user, id);
   if (!asset) notFound();
 
-  const canEdit = can(user.role, "asset:update") && asset.status !== "DISPOSED";
+  const isDisposed = asset.status === "DISPOSED";
+  const canEdit = can(user.role, "asset:update") && !isDisposed;
+  const canStatus = can(user.role, "asset:status");
+  const allowedNextStatuses = nextStatuses(asset.status);
+  const canLogMaintenance =
+    can(user.role, "maintenance:create") &&
+    asset.status !== "DISPOSED" &&
+    asset.status !== "PLANNED";
+
   const cost =
     asset.acquisitionCost == null ? null : Number(asset.acquisitionCost);
+
+  const historyEntries: TimelineEntry[] = asset.history.map((h) => ({
+    id: h.id,
+    fromStatus: h.fromStatus,
+    toStatus: h.toStatus,
+    remarks: h.remarks,
+    changedAt: h.changedAt.toISOString(),
+    changedBy: { name: h.changedBy.name },
+  }));
+
+  const maintenanceRecords: MaintenanceRecordView[] = asset.maintenance.map(
+    (m) => ({
+      id: m.id,
+      type: m.type,
+      description: m.description,
+      cost: m.cost == null ? null : Number(m.cost),
+      contractor: m.contractor,
+      workOrderNo: m.workOrderNo,
+      performedOn: m.performedOn.toISOString(),
+      nextDueOn: m.nextDueOn ? m.nextDueOn.toISOString() : null,
+      performedBy: { name: m.performedBy.name },
+    })
+  );
 
   return (
     <div className="space-y-6">
@@ -71,12 +110,17 @@ export default async function AssetDetailPage({
               </Button>
             </Link>
           )}
-          {/* Change Status action — added in Phase 4 (lifecycle). */}
+          <StatusChangeModal
+            assetId={asset.id}
+            currentStatus={asset.status}
+            allowedNextStatuses={allowedNextStatuses}
+            canChange={canStatus}
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left column (2/3) */}
+        {/* Left column (2/3): details + specs + maintenance */}
         <div className="space-y-6 lg:col-span-2">
           <Card>
             <CardHeader title="Details" />
@@ -117,10 +161,7 @@ export default async function AssetDetailPage({
                   label="Acquisition cost"
                   value={cost != null ? formatCurrency(cost) : null}
                 />
-                <DetailRow
-                  label="Created by"
-                  value={asset.createdBy.name}
-                />
+                <DetailRow label="Created by" value={asset.createdBy.name} />
               </dl>
               {asset.description && (
                 <p className="mt-4 text-sm text-slate-600">
@@ -137,25 +178,23 @@ export default async function AssetDetailPage({
             </CardBody>
           </Card>
 
-          {/* Maintenance card — built in Phase 4. */}
-          <Card>
-            <CardHeader title="Maintenance" />
-            <CardBody>
-              <p className="text-sm text-slate-500">
-                Maintenance history and logging arrive in Phase 4.
-              </p>
-            </CardBody>
-          </Card>
+          <MaintenancePanel
+            assetId={asset.id}
+            records={maintenanceRecords}
+            canLog={canLogMaintenance}
+          />
         </div>
 
-        {/* Right column (1/3) — Lifecycle timeline placeholder */}
+        {/* Right column (1/3): lifecycle timeline */}
         <div className="space-y-6">
           <Card>
             <CardHeader title="Lifecycle" />
             <CardBody>
-              <p className="text-sm text-slate-500">
-                The lifecycle timeline and status changes arrive in Phase 4.
-              </p>
+              <LifecycleTimeline
+                history={historyEntries}
+                currentStatus={asset.status}
+                allowedNextStatuses={allowedNextStatuses}
+              />
             </CardBody>
           </Card>
         </div>

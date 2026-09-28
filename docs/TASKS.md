@@ -31,13 +31,13 @@
 - [x] StatusBadge, ConditionBadge
 
 ## Phase 4 — Lifecycle + Maintenance (3:30–4:30)
-- [x] `lib/lifecycle.ts` (transitions + STATUS_LABELS) — created in Phase 3 (StatusBadge needs STATUS_LABELS)
-- [ ] `POST /api/assets/[id]/status` with transaction
-- [ ] `StatusChangeModal` + `LifecycleTimeline`
-- [ ] Maintenance schemas (contractor, workOrderNo) + `GET/POST /api/assets/[id]/maintenance`
-- [ ] `MaintenanceForm` modal + `MaintenanceList`
-- [ ] `/api/maintenance/upcoming` + `/maintenance` page
-- [ ] Verify RBAC + division scoping (Manager Surat cannot open an Ahmedabad asset)
+- [x] `lib/lifecycle.ts` (transitions + STATUS_LABELS) — created in Phase 3 (StatusBadge needs STATUS_LABELS); Phase 4 added STATUS_DOT/STATUS_RING for the timeline
+- [x] `POST /api/assets/[id]/status` with transaction (409 INVALID_TRANSITION lists allowed via STATUS_LABELS; 400 when remarks missing for DECOMMISSIONED/DISPOSED)
+- [x] `StatusChangeModal` (selectable status cards, required-remarks marker, hidden without asset:status or next statuses) + `LifecycleTimeline` (chronological, ringed current, faded next path)
+- [x] Maintenance schemas (contractor, workOrderNo, future/next-due refinements) + `GET/POST /api/assets/[id]/maintenance` (409 for DISPOSED/PLANNED)
+- [x] `MaintenanceForm` modal + `MaintenanceList` (type badge, cost ₹, contractor, work order, performed by, overdue next-due in red) + `MaintenancePanel`
+- [x] `/api/maintenance/upcoming` (latest-record-per-asset, scoped, IN_SERVICE/UNDER_MAINTENANCE only) + `/maintenance` page (Overdue/Upcoming/All tabs, overdue rows red)
+- [x] Verify RBAC + division scoping — status/maintenance routes use scoped `findFirst` → 404 out of division; `requireRole` gates asset:status (403 for OFFICER) and maintenance:create (allows OFFICER)
 
 ## Phase 5 — Dashboard, polish, ship (4:30–7:00)
 - [ ] `lib/stats.ts` (scoped) + `/api/dashboard/stats`
@@ -60,6 +60,9 @@
 - **Phase 2 — live login testing needs the DB**: unauthenticated redirects (`/dashboard`, `/assets`, `/maintenance`, `/users` → `/login`) and the login page + demo box were verified with a running dev server. Verifying the 4 real logins, wrong-password error, per-user Topbar role/division, and Manager→`/users` redirect requires the seeded Neon DB (set `DATABASE_URL`, then `migrate dev` + `db seed`).
 - **Phase 3 — specs typing**: `specsSchemaByCategoryCode` is typed `Record<string, z.ZodObject>` per API_SPEC; Prisma's `Json` input needs a cast (`as Prisma.InputJsonValue`) when writing validated specs. On PATCH, clearing specs writes `Prisma.JsonNull`.
 - **Phase 3 — verification**: `npm run build` passes (zero type errors) — the automated DoD gate. The functional checklist (division scoping, code generation, category-swap, 403s, URL-synced filters) is implemented per docs but live-testing it requires the seeded Neon DB (manual `DATABASE_URL` + `migrate` + `seed`), same constraint noted in Phase 2.
+- **Phase 4 — faded upcoming path**: the timeline's "remaining possible path" renders the current status's immediate `allowedNextStatuses` as faded dashed steps (accurate for a branching machine) rather than guessing one linear canonical path.
+- **Phase 4 — status endpoint response**: `POST /api/assets/[id]/status` returns `{ asset, history }` (updated asset incl. `allowedNextStatuses` + the new StatusHistory row) so the client can refresh both timeline and header from one call.
+- **Phase 4 — verification**: `npm run build` passes (zero type errors). Pure lifecycle/validator logic verified with a standalone tsx script (19/19: full chain valid, PLANNED→DISPOSED rejected with allowed-list, DISPOSED terminal, remarks/length rules, maintenance future-date + nextDueOn refinements). Full end-to-end HTTP checks (403/404/409 responses, red overdue rows vs seed, per-division scoping in the browser) still require the seeded Neon DB — no local Postgres/Docker is available, same manual `DATABASE_URL` + `migrate` + `seed` constraint noted for Phases 2–3.
 - **Phase 3 — list sorting UX**: sort is exposed via clickable table headers (Code, Name, Length, Cost, Updated) that write `sort`/`order` to the URL; safe-listed to the fields in `assetQuerySchema`.
 
 ## Manual steps (developer)
