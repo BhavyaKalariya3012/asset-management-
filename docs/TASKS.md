@@ -40,15 +40,15 @@
 - [x] Verify RBAC + division scoping — status/maintenance routes use scoped `findFirst` → 404 out of division; `requireRole` gates asset:status (403 for OFFICER) and maintenance:create (allows OFFICER)
 
 ## Phase 5 — Dashboard, polish, ship (4:30–7:00)
-- [ ] `lib/stats.ts` (scoped) + `/api/dashboard/stats`
-- [ ] 6 KPI cards + StatusPie + CategoryBar + DivisionBar (admin) + ConditionBar + CostByMonth + Attention table
-- [ ] `/users` admin page + `/api/users`
-- [ ] loading/error/empty states, toasts everywhere
-- [ ] Mobile pass at 390px
-- [ ] CSV export (nice-to-have)
-- [ ] README
-- [ ] Production deploy + `prisma migrate deploy` + seed prod DB
-- [ ] Demo rehearsal on production URL, 2×
+- [x] `lib/stats.ts` (scoped) + `/api/dashboard/stats`
+- [x] 6 KPI cards + StatusPie + CategoryBar + DivisionBar (admin) + ConditionBar + CostByMonth + Attention table
+- [x] `/users` admin page + `/api/users` (+ `/api/users/[id]` PATCH)
+- [x] loading/error/empty states, toasts everywhere (group error boundary + maintenance/users skeletons + global 404)
+- [x] Mobile pass at 390px (overflow-x-auto tables, grids stack below md, responsive KPI grid, ResponsiveContainer charts)
+- [x] CSV export (`/api/assets/export` + Export CSV button, scoped + filtered)
+- [x] README (overview, stack, mermaid architecture + lifecycle, RBAC table, setup, deploy, roadmap)
+- [ ] Production deploy + `prisma migrate deploy` + seed prod DB (manual — see "Ship checklist" in Decisions)
+- [ ] Demo rehearsal on production URL, 2× (manual — script in docs/DEMO_SCRIPT.md)
 
 ## Decisions (agent: log any assumption here)
 - **Enum syntax**: `docs/DATABASE.md` shows single-line enums (`enum Role { ADMIN MANAGER OFFICER }`). Prisma 6 requires one enum value per line, so the schema uses the multi-line form. Values are identical — no behavioural change.
@@ -75,3 +75,20 @@
 4. **Inspect**: `npx prisma studio` — expect ~70 assets across 6 divisions, each with specs, status history and maintenance.
 5. **GitHub**: create a repo and `git remote add origin <url>` then `git push -u origin master`.
 6. **Vercel**: import the repo, set env vars `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL` (= production URL). Build runs `prisma generate && next build`. For production DB, run `npx prisma migrate deploy` and seed once.
+- **Phase 5 — build/verification**: `npm run build` passes with zero type errors (the DoD gate). Recharts v3 tightened callback typing — the pie label/tooltip use a pre-mapped `label` field and `Number(value)` coercion instead of typed formatters. Client components must not import from `@/lib/rbac` (it transitively pulls `bcrypt` via `session`→`auth`); `ROLE_LABELS` is mirrored locally in `UsersManager`. No `.env`/local Postgres available, so the runtime checks in PRD §5 (real logins, live scoping 404s, dashboard-vs-Studio counts, admin-creates-user login) require the seeded Neon DB — code paths implemented and type-checked; see the PRD §5 report below.
+- **Phase 5 — PRD §5 checklist (static/code review; runtime items need the seeded DB)**:
+  1. Login all roles / wrong password error — PASS (NextAuth Credentials in `auth.ts`; inactive users rejected; login page shows error). Runtime login needs DB.
+  2. Manager sees only own division; Admin all; direct URL to other division → 404 — PASS (`divisionScope` spread into every query; `getAssetById` uses scoped `findFirst` → null → `notFound()`).
+  3. Officer cannot see New Asset / Change Status (UI hidden AND API 403) — PASS (UI gated by `can()`; routes `requireRole("asset:create"/"asset:status")` → 403 for OFFICER).
+  4. Category-specific fields shown + displayed on detail — PASS (`CategorySpecsFields` switches by category; `SpecsList` renders specs).
+  5. Invalid transition rejected with clear message — PASS (`canTransition` → 409 listing allowed via STATUS_LABELS).
+  6. Every transition in timeline with user/date/remarks — PASS (transactional StatusHistory write; `LifecycleTimeline`).
+  7. Maintenance captures contractor + work order no. — PASS (fields in schema, form, list).
+  8. Dashboard numbers match DB + respect scope — PASS by construction (`getDashboardStats` uses `divisionScope`); exact counts vs Studio need the seeded DB.
+  9. Pagination + filters via URL params — PASS (`assetQuerySchema` + `AssetFilters`/`AssetPagination` URL-synced).
+  10. Live on Vercel + usable at 390px — code READY (responsive layout); deploy is the manual step below.
+- **Ship checklist (developer, manual — no local DB in this environment)**:
+  1. Vercel → Project → Settings → Environment Variables: set `DATABASE_URL` (Neon pooled), `NEXTAUTH_SECRET` (`openssl rand -base64 32`), `NEXTAUTH_URL` (= production URL).
+  2. Against prod DB: `npx prisma migrate deploy` then `npx prisma db seed`.
+  3. Trigger a redeploy (build runs `prisma generate && next build`).
+  4. Rehearse `docs/DEMO_SCRIPT.md` on the production URL twice; verify dashboard counts against `npx prisma studio` for both Admin and the Ahmedabad Manager.
