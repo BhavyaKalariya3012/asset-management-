@@ -1,14 +1,14 @@
 # TASKS — tick as you go
 
 ## Phase 1 — Foundation (0:00–1:15)
-- [ ] create-next-app (TS, Tailwind, App Router, src dir, alias @/*)
-- [ ] Install deps (prisma@6, @prisma/client@6, next-auth@4, bcrypt, zod, recharts, lucide-react, clsx, tsx, @types/bcrypt)
-- [ ] `.env`, `.env.example`, `.gitignore`
-- [ ] Neon DB + DATABASE_URL
-- [ ] `prisma/schema.prisma` from docs/DATABASE.md, `migrate dev --name init`
-- [ ] `lib/prisma.ts`, `lib/api.ts`, `lib/utils.ts`, `lib/assetCode.ts`
-- [ ] Seed script per docs/SEED_DATA.md (divisions, users, categories, locations, ~70 assets with specs, history, maintenance)
-- [ ] GitHub repo pushed, Vercel connected, first deploy green
+- [x] create-next-app (TS, Tailwind, App Router, src dir, alias @/*)
+- [x] Install deps (prisma@6, @prisma/client@6, next-auth@4, bcrypt, zod, recharts, lucide-react, clsx, tsx, @types/bcrypt)
+- [x] `.env.example`, `.gitignore` (`.env` is created by the developer — values below)
+- [ ] Neon DB + DATABASE_URL (manual — see "Manual steps" in Decisions)
+- [x] `prisma/schema.prisma` from docs/DATABASE.md — schema authored & validated; `migrate dev --name init` is manual (needs DATABASE_URL)
+- [x] `lib/prisma.ts`, `lib/api.ts`, `lib/utils.ts`, `lib/assetCode.ts`
+- [x] Seed script per docs/SEED_DATA.md (divisions, users, categories, locations, ~70 assets with specs, history, maintenance) — authored & type-checked; `db seed` is manual (needs DATABASE_URL)
+- [ ] GitHub repo pushed, Vercel connected, first deploy green (manual — see "Manual steps")
 
 ## Phase 2 — Auth + RBAC + Division scope + Shell (1:15–2:00)
 - [ ] NextAuth Credentials (`lib/auth.ts`, route, type augmentation incl. divisionId)
@@ -51,4 +51,19 @@
 - [ ] Demo rehearsal on production URL, 2×
 
 ## Decisions (agent: log any assumption here)
--
+- **Enum syntax**: `docs/DATABASE.md` shows single-line enums (`enum Role { ADMIN MANAGER OFFICER }`). Prisma 6 requires one enum value per line, so the schema uses the multi-line form. Values are identical — no behavioural change.
+- **create-next-app pinned versions**: the scaffold produced Next.js 16.3.6 + React 19. `next-auth@4` peer-ranges predate these, so installs use `--legacy-peer-deps`. Revisit in Phase 2 when wiring NextAuth.
+- **npm 11 script gating**: npm 11 blocks dependency install scripts by default. Approved via `npm approve-scripts prisma @prisma/client @prisma/engines bcrypt esbuild unrs-resolver` (needed for Prisma engines, bcrypt native build, and tsx/esbuild). Re-run this after a fresh `npm install` if postinstall scripts get re-gated.
+- **Extra managers seeded**: added `manager4/5/6@gov.in` (Rajkot/Gandhinagar/Bhuj) so every division has a manager to attribute `StatusHistory.changedBy` and maintenance to. Documented demo creds in CLAUDE.md remain valid.
+- **Locations idempotency**: `Location` has no unique key, so the seed uses find-or-create on (name, district).
+
+## Manual steps (developer)
+1. **Create Neon Postgres DB**: sign in at https://neon.tech, create a project/database, copy the pooled connection string.
+2. **Create `.env`** in the project root with:
+   - `DATABASE_URL="postgresql://USER:PASS@HOST/db?sslmode=require"` (from Neon)
+   - `NEXTAUTH_SECRET="<output of: openssl rand -base64 32>"`
+   - `NEXTAUTH_URL="http://localhost:3000"`
+3. **Migrate + seed**: `npx prisma migrate dev --name init` then `npx prisma db seed`.
+4. **Inspect**: `npx prisma studio` — expect ~70 assets across 6 divisions, each with specs, status history and maintenance.
+5. **GitHub**: create a repo and `git remote add origin <url>` then `git push -u origin master`.
+6. **Vercel**: import the repo, set env vars `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL` (= production URL). Build runs `prisma generate && next build`. For production DB, run `npx prisma migrate deploy` and seed once.
