@@ -20,18 +20,18 @@
 - [x] Root `/` redirects to `/dashboard`
 
 ## Phase 3 — Asset CRUD (2:00–3:30)
-- [ ] `lib/validators.ts` (asset schemas + specsSchemaByCategoryCode)
-- [ ] `GET /api/meta` (scoped divisions)
-- [ ] `lib/queries/assets.ts` (scoped)
-- [ ] `GET/POST /api/assets`
-- [ ] `GET/PATCH /api/assets/[id]`
-- [ ] Assets list page with URL-synced filters + pagination
-- [ ] `AssetForm` + `CategorySpecsFields`, new page, edit page
-- [ ] Asset detail page (details + SpecsList)
-- [ ] StatusBadge, ConditionBadge
+- [x] `lib/validators.ts` (asset schemas + specsSchemaByCategoryCode)
+- [x] `GET /api/meta` (scoped divisions)
+- [x] `lib/queries/assets.ts` (scoped)
+- [x] `GET/POST /api/assets`
+- [x] `GET/PATCH /api/assets/[id]`
+- [x] Assets list page with URL-synced filters + pagination
+- [x] `AssetForm` + `CategorySpecsFields`, new page, edit page
+- [x] Asset detail page (details + SpecsList)
+- [x] StatusBadge, ConditionBadge
 
 ## Phase 4 — Lifecycle + Maintenance (3:30–4:30)
-- [ ] `lib/lifecycle.ts` (transitions + STATUS_LABELS)
+- [x] `lib/lifecycle.ts` (transitions + STATUS_LABELS) — created in Phase 3 (StatusBadge needs STATUS_LABELS)
 - [ ] `POST /api/assets/[id]/status` with transaction
 - [ ] `StatusChangeModal` + `LifecycleTimeline`
 - [ ] Maintenance schemas (contractor, workOrderNo) + `GET/POST /api/assets/[id]/maintenance`
@@ -58,6 +58,9 @@
 - **Locations idempotency**: `Location` has no unique key, so the seed uses find-or-create on (name, district).
 - **Phase 2 — middleware vs proxy**: Next 16 deprecates the `middleware` file convention in favour of `proxy`, but the task specifies `next-auth/middleware`, so `src/middleware.ts` stays. It builds and runs (registered as "Proxy (Middleware)"). Consider migrating later.
 - **Phase 2 — live login testing needs the DB**: unauthenticated redirects (`/dashboard`, `/assets`, `/maintenance`, `/users` → `/login`) and the login page + demo box were verified with a running dev server. Verifying the 4 real logins, wrong-password error, per-user Topbar role/division, and Manager→`/users` redirect requires the seeded Neon DB (set `DATABASE_URL`, then `migrate dev` + `db seed`).
+- **Phase 3 — specs typing**: `specsSchemaByCategoryCode` is typed `Record<string, z.ZodObject>` per API_SPEC; Prisma's `Json` input needs a cast (`as Prisma.InputJsonValue`) when writing validated specs. On PATCH, clearing specs writes `Prisma.JsonNull`.
+- **Phase 3 — verification**: `npm run build` passes (zero type errors) — the automated DoD gate. The functional checklist (division scoping, code generation, category-swap, 403s, URL-synced filters) is implemented per docs but live-testing it requires the seeded Neon DB (manual `DATABASE_URL` + `migrate` + `seed`), same constraint noted in Phase 2.
+- **Phase 3 — list sorting UX**: sort is exposed via clickable table headers (Code, Name, Length, Cost, Updated) that write `sort`/`order` to the URL; safe-listed to the fields in `assetQuerySchema`.
 
 ## Manual steps (developer)
 1. **Create Neon Postgres DB**: sign in at https://neon.tech, create a project/database, copy the pooled connection string.
