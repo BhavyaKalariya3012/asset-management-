@@ -12,6 +12,7 @@ import { listAssets, serializeAssetRow } from "@/lib/queries/assets";
 import { AssetFilters } from "@/components/assets/AssetFilters";
 import { AssetTable, type AssetRow } from "@/components/assets/AssetTable";
 import { AssetPagination } from "@/components/assets/AssetPagination";
+import { ExportCsvButton } from "@/components/assets/ExportCsvButton";
 
 export const metadata = { title: "Assets · R&B AssetTrack" };
 
@@ -48,14 +49,17 @@ export default async function AssetsPage({
         title="Assets"
         subtitle="Roads, bridges, buildings and machinery"
         action={
-          can(user.role, "asset:create") ? (
-            <Link href="/assets/new">
-              <Button>
-                <Plus className="h-4 w-4" />
-                New Asset
-              </Button>
-            </Link>
-          ) : undefined
+          <div className="flex gap-2">
+            <ExportCsvButton />
+            {can(user.role, "asset:create") && (
+              <Link href="/assets/new">
+                <Button>
+                  <Plus className="h-4 w-4" />
+                  New Asset
+                </Button>
+              </Link>
+            )}
+          </div>
         }
       />
 

@@ -78,6 +78,34 @@ export async function listAssets(user: SessionUser, query: AssetQuery) {
 }
 
 /**
+ * Division-scoped, filtered asset list with NO pagination — used by the CSV
+ * export. Applies the same filters as listAssets (sort included) but returns
+ * every matching row.
+ */
+export async function listAssetsForExport(user: SessionUser, query: AssetQuery) {
+  const { q, status, categoryId, divisionId, condition, sort, order } = query;
+
+  const where: Prisma.AssetWhereInput = { ...divisionScope(user) };
+  if (status) where.status = status;
+  if (condition) where.condition = condition;
+  if (categoryId) where.categoryId = categoryId;
+  if (user.role === "ADMIN" && divisionId) where.divisionId = divisionId;
+  if (q) {
+    where.OR = [
+      { name: { contains: q, mode: "insensitive" } },
+      { assetCode: { contains: q, mode: "insensitive" } },
+      { roadNumber: { contains: q, mode: "insensitive" } },
+    ];
+  }
+
+  return prisma.asset.findMany({
+    where,
+    include: listInclude,
+    orderBy: { [sort]: order },
+  });
+}
+
+/**
  * Division-scoped single-asset lookup. Uses findFirst with the scope spread in,
  * so an out-of-scope id resolves to null (→ 404 for non-admins).
  */
